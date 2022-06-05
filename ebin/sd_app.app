@@ -1,0 +1,10 @@
+{application,sd_app,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[sd_app]},
+              {mod,{sd_app_app,[]}},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[sd,sd_app_app,sd_app_sup,sd_server]},
+              {licenses,["Apache 2.0"]},
+              {links,[]}]}.

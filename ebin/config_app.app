@@ -1,0 +1,11 @@
+{application,config_app,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[]},
+              {mod,{config_app_app,[]}},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[apps,config,config_app_app,config_app_sup,deployment,
+                        host]},
+              {licenses,["Apache 2.0"]},
+              {links,[]}]}.

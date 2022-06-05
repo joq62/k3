@@ -1,0 +1,11 @@
+{application,nodelog,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[]},
+              {mod,{nodelog_app,[]}},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[lib_logger,misc_node,nodelog_app,nodelog_server,
+                        nodelog_sup]},
+              {licenses,["Apache 2.0"]},
+              {links,[]}]}.
