@@ -26,25 +26,30 @@ start()->
     %% test pod_lib
     ok=application:start(k3),
 
-    {state,cluster1,cluster1_cookie,undefined,undefined,undefined,
+    {state,"cluster1",cluster1_cookie,undefined,undefined,undefined,
      [{"c202",'cluster1_k3@c202'},{"c200",'cluster1_k3@c200'},{"c201",'cluster1_k3@c201'},{"c100",'cluster1_k3@c100'}],
-     undefined
+     undefined,undefined,undefined
     }=k3_server:read_state(),
     NumControllers=3,
-    NumWorkers=20,
+    NumWorkers=5,
 
-    ok=k3_server:create_cluster(NumControllers,NumWorkers,["c100"]),
+    k3_server:create_cluster(NumControllers,NumWorkers,["c100"]),
 
-    {state,"cluster1",cluster1_cookie,3,[non],undefined,{_Date,_Time}}=k3_server:read_state(),
+    AllPods=sd:get(pod),
+    io:format("AllPods ~p~n",[AllPods]),
 
-    {error,[already_started,"cluster1"]}=k3_server:create_cluster("cluster1",cluster1_cookie,3,[non]),
+
+
+%    {state,"cluster1",cluster1_cookie,3,[non],undefined,{_Date,_Time}}=k3_server:read_state(),
+
+%    {error,[already_started,"cluster1"]}=k3_server:create_cluster("cluster1",cluster1_cookie,3,[non]),
         
-    {error,[eexists,"glurk"]}=k3_server:delete_cluster("glurk"),
+%    {error,[eexists,"glurk"]}=k3_server:delete_cluster("glurk"),
     
-    ok=k3_server:delete_cluster("cluster1"),
+%    ok=k3_server:delete_cluster("cluster1"),
 
-    {state,undefined,undefined,undefined,undefined,undefined,undefined}=k3_server:read_state(),
-    {error,[eexists,"cluster1"]}=k3_server:delete_cluster("cluster1"),
+ %   {state,undefined,undefined,undefined,undefined,undefined,undefined}=k3_server:read_state(),
+  %  {error,[eexists,"cluster1"]}=k3_server:delete_cluster("cluster1"),
 
 
 

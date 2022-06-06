@@ -45,6 +45,8 @@
 		num_workers=undefined,
 		affinity=undefined,
 		k3_nodes=undefined,
+		controller_start=undefined,
+		worker_start=undefined,
 		date=undefined
 	       }).
 
@@ -143,9 +145,12 @@ init([]) ->
     nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start sd_app ",application:start(sd_app)}),
     nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start config_app ",application:start(config_app)}),
     nodelog_server:log(notice,?MODULE_STRING,?LINE,"server successfully started"),    
+
+    %% Start leader election to determ leader
     Cookie=erlang:get_cookie(),
-    {ok,ClusterId}=application:get_env(clusterid),
-    K3NodeName=atom_to_list(ClusterId)++"_k3",
+    {ok,ClusterIdAtom}=application:get_env(clusterid),
+    ClusterId=atom_to_list(ClusterIdAtom),
+    K3NodeName=ClusterId++"_k3",
     AllK3Nodes=[{HostName,list_to_atom(K3NodeName++"@"++HostName)}||HostName<-config:host_id_all()],
    % K3Nodes=[{Node,net_adm:ping(Node)}||Node<-AllK3Nodes],
     
@@ -170,14 +175,18 @@ handle_call({create_cluster,NumControllers,NumWorkers,Affinity},_From, State) ->
     Cookie=State#state.cookie,
 
     Reply=case k3_lib:create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,Affinity,State#state.k3_nodes) of
-	      ok->
-		  nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterName," Cluster successfully started"}),	 
+	      {ok,StartResult}->
+		  nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterName," Cluster successfully created"}),	 
+		  ControllerStart=proplists:get_value(controller_start,StartResult),
+		  WorkerStart=proplists:get_value(worker_start,StartResult),
 		  NewState=State#state{name=ClusterName,
 				       cookie=Cookie,
 				       num_controllers=NumControllers,
 				       affinity=Affinity,
+				       controller_start=ControllerStart,
+				       worker_start=WorkerStart,
 				       date={date(),time()}},
-		  ok;
+		  {ok,StartResult};
 	      {error,Reason}->
 		  nodelog_server:log(warning,?MODULE_STRING,?LINE,{"error creating Cluster",{error,Reason}}),
 		  NewState=State,

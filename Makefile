@@ -1,6 +1,6 @@
 all:
 	rm -rf  *~ */*~ apps/k3/src/*.beam test/*.beam erl_cra*;
-	rm -rf  logs *.pod_dir rebar.lock;
+	rm -rf  cluster* logs *.pod_dir rebar.lock;
 	rm -rf _build test_ebin ebin *_info_specs;
 	mkdir ebin;		
 	rebar3 compile;	
