@@ -25,16 +25,6 @@
 start()->
     %% test pod_lib
     ok=application:start(k3),
-
-    {state,"cluster1",cluster1_cookie,undefined,undefined,undefined,
-     [{"c202",'cluster1_k3@c202'},{"c200",'cluster1_k3@c200'},{"c201",'cluster1_k3@c201'},{"c100",'cluster1_k3@c100'}],
-     undefined,undefined,undefined
-    }=k3_server:read_state(),
-    NumControllers=3,
-    NumWorkers=5,
-
-    k3_server:create_cluster(NumControllers,NumWorkers,["c100"]),
-
     AllPods=sd:get(pod),
     io:format("AllPods ~p~n",[AllPods]),
 

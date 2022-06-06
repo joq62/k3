@@ -47,7 +47,7 @@
 		k3_nodes=undefined,
 		controller_start=undefined,
 		worker_start=undefined,
-		date=undefined
+		start_time=undefined
 	       }).
 
 %% ====================================================================
@@ -147,17 +147,45 @@ init([]) ->
     nodelog_server:log(notice,?MODULE_STRING,?LINE,"server successfully started"),    
 
     %% Start leader election to determ leader
-    Cookie=erlang:get_cookie(),
+    
+    %% Check start parameters
     {ok,ClusterIdAtom}=application:get_env(clusterid),
     ClusterId=atom_to_list(ClusterIdAtom),
+
+    {ok,NumControllers}=application:get_env(num_controllers),
+    true=is_integer(NumControllers),
+
+    {ok,NumWorkers}=application:get_env(num_workers),
+  %  NumWorkers=list_to_integer(atom_to_list(NumWorkersAtom)),
+    true=is_integer(NumWorkers),
+
+    {ok,AffinityAtom}=application:get_env(affinity),
+    true=is_list(AffinityAtom),
+    Affinity=[atom_to_list(Host)||Host<-AffinityAtom],
+
+    Cookie=erlang:get_cookie(),
+
     K3NodeName=ClusterId++"_k3",
     AllK3Nodes=[{HostName,list_to_atom(K3NodeName++"@"++HostName)}||HostName<-config:host_id_all()],
    % K3Nodes=[{Node,net_adm:ping(Node)}||Node<-AllK3Nodes],
-    
+
+
+    {ok,StartResult}=k3_lib:create_cluster(ClusterId,Cookie,NumControllers,NumWorkers,Affinity,AllK3Nodes),
+    nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterId," Cluster successfully created"}),	 
+    ControllerStart=proplists:get_value(controller_start,StartResult),
+    WorkerStart=proplists:get_value(worker_start,StartResult),
+  
     {ok, #state{
 	    name=ClusterId,
 	    cookie=Cookie,
-	    k3_nodes=AllK3Nodes}
+	    num_controllers=NumControllers,
+	    num_workers=NumWorkers,
+	    affinity=Affinity,
+	    k3_nodes=AllK3Nodes,
+	    controller_start=ControllerStart,
+	    worker_start=WorkerStart,
+	    start_time={date(),time()}
+	   }
     }.
 
 %% --------------------------------------------------------------------
@@ -185,7 +213,7 @@ handle_call({create_cluster,NumControllers,NumWorkers,Affinity},_From, State) ->
 				       affinity=Affinity,
 				       controller_start=ControllerStart,
 				       worker_start=WorkerStart,
-				       date={date(),time()}},
+				       start_time={date(),time()}},
 		  {ok,StartResult};
 	      {error,Reason}->
 		  nodelog_server:log(warning,?MODULE_STRING,?LINE,{"error creating Cluster",{error,Reason}}),
@@ -200,7 +228,7 @@ handle_call({delete_cluster},_From, State) ->
 	       num_controllers=undefined,
 	       num_workers=undefined,
 	       affinity=undefined,
-	       date=undefined},
+	       start_time=undefined},
     
 
     {reply, Reply, NewState};

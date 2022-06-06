@@ -30,4 +30,4 @@ eunit:
 	rebar3 compile;
 	cp _build/default/lib/*/ebin/* ebin;
 	erlc -o test_ebin test/*.erl;
-	erl -pa ebin -pa test_ebin -sname $(sname) -run basic_eunit start -setcookie $(cookie) -k3 clusterid $(clusterid)
+	erl -pa ebin -pa test_ebin -sname $(sname) -run basic_eunit start -setcookie $(cookie) -k3 clusterid $(clusterid) -k3 num_controllers $(num_controllers) -k3 num_workers $(num_workers) -k3 affinity $(affinity) 
