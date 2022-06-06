@@ -38,7 +38,7 @@
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,Affinity,_K3Nodes)->
+create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,_Affinity,_K3Nodes)->
     os:cmd("rm -rf "++ClusterName),
     Reply=case file:make_dir(ClusterName) of
 	      {error,Reason}->
@@ -54,12 +54,22 @@ create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,Affinity,_K3Nodes)->
 create_controllers(0,_,_,Result)->	  
     Result;
 create_controllers(N,ClusterName,Cookie,Acc)->
+    PodApplId="pod",
+    PodApplVsn="0.1.0",
+
+    ApplId="divi_app",
+    ApplVsn="latest",    
     UniqueString=integer_to_list(erlang:system_time(microsecond),36),
     PodId=ClusterName++"_"++"controller"++integer_to_list(N)++"_"++UniqueString,
     PodDir=filename:join(ClusterName,PodId),
-    NewAcc=case pod_lib:create_pod(PodId,PodDir,"pod","0.1.0") of
-	       {ok,PodNode,PodDir}->
-		   [{ok,PodId,PodDir,PodNode,{date(),time()}}|Acc];
+    NewAcc=case pod_lib:create_pod(PodId,PodDir,PodApplId,PodApplVsn) of
+	       {ok,PodNode,PodDir,_PodApplId,_PodApplVsn,_PodApplDir}->
+	      	   case pod_lib:load_start(PodNode,PodDir,ApplId,ApplVsn) of
+		       {ok,ApplId,ApplVsn,ApplDir}->
+			   [{ok,PodId,PodDir,PodNode,controller,ApplId,ApplVsn,ApplDir,{date(),time()}}|Acc];
+		       {error,Reason}->
+			   [{error,[Reason,PodId,PodDir,ApplId,ApplVsn,{date(),time()}]}|Acc]
+		   end;
 	       {error,Reason}->
 		   [{error,[Reason,PodId,PodDir,{date(),time()}]}|Acc]
 	   end,
@@ -69,32 +79,20 @@ create_controllers(N,ClusterName,Cookie,Acc)->
 create_workers(0,_,_,Result)->	  
     Result;
 create_workers(N,ClusterName,Cookie,Acc)->
+    PodApplId="pod",
+    PodApplVsn="0.1.0",
     UniqueString=integer_to_list(erlang:system_time(microsecond),36),
     PodId=ClusterName++"_"++"worker"++integer_to_list(N)++"_"++UniqueString,
     PodDir=filename:join(ClusterName,PodId),
-    NewAcc=case pod_lib:create_pod(PodId,PodDir,"pod","0.1.0") of
-	       {ok,PodNode,PodDir}->
-		   [{ok,PodId,PodDir,PodNode,{date(),time()}}|Acc];
+    NewAcc=case pod_lib:create_pod(PodId,PodDir,PodApplId,PodApplVsn) of
+	       {ok,PodNode,PodDir,_PodApplId,_PodApplVsn,_PodApplDir}->	   
+		   [{ok,PodId,PodDir,PodNode,worker,{date(),time()}}|Acc];
 	       {error,Reason}->
 		   [{error,[Reason,PodId,PodDir,{date(),time()}]}|Acc]
 	   end,
     create_workers(N-1,ClusterName,Cookie,NewAcc).
     
 
-start_controller(HostName,NodeName,Cookie,PaArgs,EnvArgs)->
-    Node=list_to_atom(NodeName++"@"++HostName),
-    rpc:call(Node,init,stop,[],1000),
-    timer:sleep(1000),
-    Ip="localhost",
-    Port=22,
-    User="joq62",
-    Password="festum01",
-    Msg="erl -sname "++NodeName++" -setcookie "++atom_to_list(Cookie)++" "++"-detached",
-    TimeOut=5*1000,
-    ok=my_ssh:ssh_send(Ip,Port,User,Password,Msg,TimeOut),
-    timer:sleep(2000),
-    pong=net_adm:ping(Node),
-    {ok,Node}.
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -171,45 +169,6 @@ delete_vm(Node,Dir)->
     timer:sleep(500),
     ok.
 
-%% -------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
-load_start_appl(ApplId,ApplVsn,Node) ->
-    Reply=case net_adm:ping(Node) of
-	      pang->
-		  nodelog_server:log(warning,?MODULE_STRING,?LINE,
-				     {"Node not started/running ",{error,[eexists,Node]}}),
-		  {error,[eexists,Node]};
-	      pong->
-		  case config:application_gitpath(ApplId) of
-		       {error,Err}->
-			  nodelog_server:log(warning,?MODULE_STRING,?LINE,
-					     {"Error when geting gitpath to application ",ApplId,' ', {error,Err}}),
-			  {error,Err};
-		      {ok,GitPath}->
-			  case rpc:call(Node,service,load,[ApplId,ApplVsn,GitPath],20*5000) of
-			      {error,Reason}->
-				  nodelog_server:log(warning,?MODULE_STRING,?LINE,{"Error when loading service ",ApplId,' ', {error,Reason}}),
-				  {error,Reason};
-			      ok ->
-				  nodelog_server:log(notice,?MODULE_STRING,?LINE,
-						     {"Application  succesfully loaded ",ApplId,' ',ApplVsn,' ',Node}),
-				  case rpc:call(Node,service,start,[ApplId,ApplVsn],20*5000) of
-				      ok->
-					  nodelog_server:log(notice,?MODULE_STRING,?LINE,
-							     {"Application  succesfully started ",ApplId,' ',ApplVsn,' ',Node}),
-					  ok;
-				      Error ->
-					  nodelog_server:log(notice,?MODULE_STRING,?LINE,
-							     {"Error whenstarting application ",ApplId,' ',Error}),
-					  Error					      
-				  end
-			  end	
-		  end	  
-	  end,
-    Reply.
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
