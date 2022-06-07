@@ -17,6 +17,7 @@
 %% --------------------------------------------------------------------
 %-compile(export_all).
 -export([
+	 start_controllers/1,
 	 start_needed_appl/3,
 	 get_env/0,
 	 
@@ -31,6 +32,22 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
+start_controllers(StartedControllers)->
+    ApplId="k3_controller",
+    ApplVsn="latest",
+    
+    start_controllers(StartedControllers,ApplId,ApplVsn,[]),
+    ok.
+
+start_controllers([],_,_,Result)->
+    Result;
+start_controllers([PodInfo|T],ApplId,ApplVsn,Acc) ->
+    PodNode=proplists:get_value(pod_node,PodInfo),
+    PodDir=proplists:get_value(pod_dir,PodInfo),
+    R=pod_lib:load_start(PodNode,PodDir,ApplId,ApplVsn),
+    start_controllers(T,ApplId,ApplVsn,[R|Acc]).
+    
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc

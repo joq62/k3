@@ -163,6 +163,7 @@ init([]) ->
     nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterId," Cluster successfully created"}),
 	 
     {StartedControllers,FailedControllers}=proplists:get_value(controllers,StartResult),    
+    ok=k3_lib:start_controllers(StartedControllers),
     {StartedWorkers,FailedWorkers}=proplists:get_value(workers,StartResult),
     
     {ok, #state{
