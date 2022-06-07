@@ -26,8 +26,10 @@ start()->
 
     ok=start_k3(),
 %    create_controllers(),
-   
     io:format(" sd:all() ~p~n",[ sd:all()]),
+    AllNodes=nodes(),
+   % [rpc:call(N,init,stop,[],1000)||N<-nodes()],
+    
    %% test pod_lib
   
 

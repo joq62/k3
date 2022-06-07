@@ -106,6 +106,7 @@ create(N,ClusterName,Cookie,Type,Started,Failed)->
     PodDir=filename:join(ClusterName,PodId),
     case pod_lib:create_pod(PodId,PodDir) of
 	{ok,PodNode}->
+	    true=erlang:monitor_node(PodNode,true),
 	    CommonR=pod_lib:load_start(PodNode,PodDir,"common","latest"),
 	    pod_lib:load_start(PodNode,PodDir,"nodelog","latest"),
 	    ok=file:make_dir(filename:join(PodDir,"logs")),

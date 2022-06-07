@@ -1,6 +1,6 @@
 [{<<"common">>,
   {git,"https://github.com/joq62/common.git",
-       {ref,"a1f2b2e128bc499e341b299b5aebbf443cf52704"}},
+       {ref,"8c8036941854246e511d64102e39581b3bfc81d2"}},
   0},
  {<<"config_app">>,
   {git,"https://github.com/joq62/config_app.git",
@@ -12,5 +12,5 @@
   0},
  {<<"sd_app">>,
   {git,"https://github.com/joq62/sd_app.git",
-       {ref,"371a53fcd894a6e7026fa3d50d70f4f52587be3f"}},
+       {ref,"904215f2e95123fbefbf6df769bb015127e3e30a"}},
   0}].

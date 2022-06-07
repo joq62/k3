@@ -164,8 +164,7 @@ init([]) ->
 	 
     {StartedControllers,FailedControllers}=proplists:get_value(controllers,StartResult),    
     {StartedWorkers,FailedWorkers}=proplists:get_value(workers,StartResult),
-  
-  
+    
     {ok, #state{
 	    cluster_id=ClusterId,
 	    cookie=Cookie,
@@ -258,8 +257,12 @@ handle_cast(_Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_info(_Info, State) ->
-    %rpc:cast(node(),log,log,[?Log_ticket("unmatched info",[Info])]),
+handle_info({nodedown,Node}, State) ->
+    io:format(" ~p~n",[{?MODULE,?LINE,nodedown,Node}]),
+    {noreply, State};
+
+handle_info(Info, State) ->
+    io:format("Info ~p~n",[{?MODULE,?LINE,Info}]),
     {noreply, State}.
 
 %% --------------------------------------------------------------------
