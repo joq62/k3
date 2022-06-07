@@ -23,9 +23,14 @@
 %	 create_pod/2,
 %	 delete_pod/2,
 	 %connect/2,
-	 create_cluster/3,
+	 started_pods/1,
+	 failed_pods/1,
+	 
+%	 create_cluster/3,
 	 delete_cluster/0,
 	 read_state/0,
+
+	 boot/0,
 	 ping/0
 	]).
 
@@ -39,7 +44,7 @@
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
-		name=undefined,
+		cluster_id=undefined,
 		cookie=undefined,
 		num_controllers=undefined,
 		num_workers=undefined,
@@ -53,7 +58,8 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
-
+boot()->
+    application:start(k3).
 
 %% ====================================================================
 %% Server functions
@@ -68,16 +74,11 @@ stop()-> gen_server:call(?SERVER, {stop},infinity).
 %% ====================================================================
 
 
-%%---------------------------------------------------------------
-%% Function:create_cluster
-%% @doc:creates a new cluster on       
-%% @param: Name,Cookie,NumControllers,Affinity
-%% @returns:ok|error,Reason}
-%%
-%%---------------------------------------------------------------
--spec create_cluster(integer(),integer(),list())-> ok|{error,term()}.
-create_cluster(NumControllers,NumWorkers,Affinity)->
-    gen_server:call(?SERVER, {create_cluster,NumControllers,NumWorkers,Affinity},infinity).
+started_pods(Type)->
+    gen_server:call(?SERVER, {started_pods,Type},infinity).
+failed_pods(Type)->
+    gen_server:call(?SERVER, {failed_pods,Type},infinity).
+    
 %%---------------------------------------------------------------
 %% Function:delete_pod
 %% @doc:delete pod PodNode and PodDir          
@@ -138,52 +139,42 @@ ping()->
 %% --------------------------------------------------------------------
 init([]) ->
 
-    CommonR=application:start(common),
-    ok=application:start(nodelog),
-    nodelog_server:create(?LogDir),
-    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start common ",CommonR}),
-    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start sd_app ",application:start(sd_app)}),
-    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start config_app ",application:start(config_app)}),
-    nodelog_server:log(notice,?MODULE_STRING,?LINE,"server successfully started"),    
+    %% Check start parameters
+    Env=k3_lib:get_env(),
+    ClusterId=proplists:get_value(cluster_id,Env),
+    Cookie=proplists:get_value(cookie,Env),
+    NumControllers=proplists:get_value(num_controllers,Env),
+    NumWorkers=proplists:get_value(num_workers,Env),
+    Affinity=proplists:get_value(affinty,Env),
+    
+    %% Start Needed applications
+    LogDir="logs",
+    LogFileName="k3.log",
+    k3_lib:start_needed_appl(ClusterId,LogDir,LogFileName),
 
     %% Start leader election to determ leader
-    
-    %% Check start parameters
-    {ok,ClusterIdAtom}=application:get_env(clusterid),
-    ClusterId=atom_to_list(ClusterIdAtom),
 
-    {ok,NumControllers}=application:get_env(num_controllers),
-    true=is_integer(NumControllers),
-
-    {ok,NumWorkers}=application:get_env(num_workers),
-  %  NumWorkers=list_to_integer(atom_to_list(NumWorkersAtom)),
-    true=is_integer(NumWorkers),
-
-    {ok,AffinityAtom}=application:get_env(affinity),
-    true=is_list(AffinityAtom),
-    Affinity=[atom_to_list(Host)||Host<-AffinityAtom],
-
-    Cookie=erlang:get_cookie(),
+ 
+    %% Create a new cluster   
 
     K3NodeName=ClusterId++"_k3",
     AllK3Nodes=[{HostName,list_to_atom(K3NodeName++"@"++HostName)}||HostName<-config:host_id_all()],
-   % K3Nodes=[{Node,net_adm:ping(Node)}||Node<-AllK3Nodes],
-
-
     {ok,StartResult}=k3_lib:create_cluster(ClusterId,Cookie,NumControllers,NumWorkers,Affinity,AllK3Nodes),
-    nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterId," Cluster successfully created"}),	 
-    ControllerStart=proplists:get_value(controller_start,StartResult),
-    WorkerStart=proplists:get_value(worker_start,StartResult),
+    nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterId," Cluster successfully created"}),
+	 
+    {StartedControllers,FailedControllers}=proplists:get_value(controllers,StartResult),    
+    {StartedWorkers,FailedWorkers}=proplists:get_value(workers,StartResult),
+  
   
     {ok, #state{
-	    name=ClusterId,
+	    cluster_id=ClusterId,
 	    cookie=Cookie,
 	    num_controllers=NumControllers,
 	    num_workers=NumWorkers,
 	    affinity=Affinity,
 	    k3_nodes=AllK3Nodes,
-	    controller_start=ControllerStart,
-	    worker_start=WorkerStart,
+	    controller_start={StartedControllers,FailedControllers},
+	    worker_start={StartedWorkers,FailedWorkers},
 	    start_time={date(),time()}
 	   }
     }.
@@ -198,29 +189,20 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call({create_cluster,NumControllers,NumWorkers,Affinity},_From, State) ->
-    ClusterName=State#state.name,
-    Cookie=State#state.cookie,
+handle_call({started_pods,controller},_From, State) ->
+    {Reply,_FailedControllers}=State#state.controller_start,
+    {reply, Reply, State};
+handle_call({failed_pods,controller},_From, State) ->
+    {_StartedControllers,Reply}=State#state.controller_start,
+    {reply, Reply, State};
 
-    Reply=case k3_lib:create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,Affinity,State#state.k3_nodes) of
-	      {ok,StartResult}->
-		  nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterName," Cluster successfully created"}),	 
-		  ControllerStart=proplists:get_value(controller_start,StartResult),
-		  WorkerStart=proplists:get_value(worker_start,StartResult),
-		  NewState=State#state{name=ClusterName,
-				       cookie=Cookie,
-				       num_controllers=NumControllers,
-				       affinity=Affinity,
-				       controller_start=ControllerStart,
-				       worker_start=WorkerStart,
-				       start_time={date(),time()}},
-		  {ok,StartResult};
-	      {error,Reason}->
-		  nodelog_server:log(warning,?MODULE_STRING,?LINE,{"error creating Cluster",{error,Reason}}),
-		  NewState=State,
-		  {error,Reason}
-	  end,
-    {reply, Reply, NewState};
+handle_call({started_pods,worker},_From, State) ->
+    {Reply,_FailedWorkers}=State#state.worker_start,
+    {reply, Reply, State};
+handle_call({failed_pods,worker},_From, State) ->
+    {_StartedWorkers,Reply}=State#state.worker_start,
+    {reply, Reply, State};
+
 
 handle_call({delete_cluster},_From, State) ->
     Reply=ok,
@@ -229,11 +211,7 @@ handle_call({delete_cluster},_From, State) ->
 	       num_workers=undefined,
 	       affinity=undefined,
 	       start_time=undefined},
-    
-
     {reply, Reply, NewState};
-
-
 
 handle_call({read_state},_From, State) ->
     Reply=State,

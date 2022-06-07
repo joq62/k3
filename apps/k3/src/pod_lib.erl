@@ -17,6 +17,8 @@
 %% --------------------------------------------------------------------
 %-compile(export_all).
 -export([
+	 create_pod/2,
+
 	 create_pod/4,
 	 delete_pod/2,
 	 load_start/4
@@ -31,7 +33,15 @@
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-
+create_pod(PodName,PodDir)->
+    Reply=case file:make_dir(PodDir) of
+	      {error, Reason}->
+		  {error, Reason};
+	      ok ->
+		  infra_lib:create_vm(PodName)
+	  end,
+    Reply.
+			  
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
