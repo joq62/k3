@@ -26,8 +26,8 @@ start()->
 
     ok=start_k3(),
 %    create_controllers(),
-    io:format(" sd:all() ~p~n",[ sd:all()]),
-    io:format(" sd:get(k3_controller) ~p~n",[ sd:get(k3_controller)]),
+    io:format(" sd_server:all() ~p~n",[ sd_server:all()]),
+    io:format(" sd_server:get(common) ~p~n",[ sd_server:get(common)]),
     
     
    % [rpc:call(N,init,stop,[],1000)||N<-nodes()],
@@ -89,7 +89,7 @@ ls([Controller|T],Acc)->
 %% Returns: non
 %% -------------------------------------------------------------------
 start_k3()->
-      ok=application:start(k3),
+    ok=k3_server:appl_start([]),
     Controllers=k3_server:started_pods(controller),
     io:format("Controllers ~p~n",[Controllers]),
     Workers=k3_server:started_pods(worker),

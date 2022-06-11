@@ -30,7 +30,7 @@
 	 delete_cluster/0,
 	 read_state/0,
 
-	 boot/0,
+	 appl_start/1,
 	 ping/0
 	]).
 
@@ -58,7 +58,7 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
-boot()->
+appl_start([])->
     application:start(k3).
 
 %% ====================================================================
@@ -150,7 +150,15 @@ init([]) ->
     %% Start Needed applications
     LogDir="logs",
     LogFileName="k3.log",
-    k3_lib:start_needed_appl(ClusterId,LogDir,LogFileName),
+
+    ok=application:start(nodelog),
+    os:cmd("rm -rf "++ClusterId),
+    ok=file:make_dir(ClusterId),
+    ok=file:make_dir(filename:join(ClusterId,LogDir)),
+    LogFile=filename:join([ClusterId,LogDir,LogFileName]),
+    nodelog_server:create(LogFile),    
+
+% k3_lib:start_needed_appl(ClusterId,LogDir,LogFileName),
 
     %% Start leader election to determ leader
 
@@ -158,12 +166,13 @@ init([]) ->
     %% Create a new cluster   
 
     K3NodeName=ClusterId++"_k3",
-    AllK3Nodes=[{HostName,list_to_atom(K3NodeName++"@"++HostName)}||HostName<-config:host_id_all()],
-    {ok,StartResult}=k3_lib:create_cluster(ClusterId,Cookie,NumControllers,NumWorkers,Affinity,AllK3Nodes),
+    AllHostNames=[proplists:get_value(hostname,Info)||Info<-config_server:host_all_info()],
+    AllK3Nodes=[{HostName,list_to_atom(K3NodeName++"@"++HostName)}||HostName<-AllHostNames],
+    {ok,StartResult}=k3_lib:create_cluster(ClusterId,atom_to_list(Cookie),NumControllers,NumWorkers,Affinity,AllK3Nodes),
     nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterId," Cluster successfully created"}),
 	 
     {StartedControllers,FailedControllers}=proplists:get_value(controllers,StartResult),    
-    ok=k3_lib:start_controllers(StartedControllers),
+%    ok=k3_lib:start_controllers(StartedControllers),
     {StartedWorkers,FailedWorkers}=proplists:get_value(workers,StartResult),
     
     {ok, #state{

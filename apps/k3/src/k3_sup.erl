@@ -29,7 +29,15 @@ init([]) ->
     SupFlags = #{strategy => one_for_all,
                  intensity => 0,
                  period => 1},
-   ChildSpecs = [#{id=>k3,
+   ChildSpecs = [#{id=>common,
+		   start=>{common_server,start,[]}},
+		 #{id=>sd,
+		   start=>{sd_server,start,[]}},
+		 #{id=>config,
+		   start=>{config_server,start,[]}},
+		 #{id=>node,
+		   start=>{node_server,start,[]}},
+		 #{id=>k3,
 		   start=>{k3_server,start,[]}}],
     {ok, {SupFlags, ChildSpecs}}.
 

@@ -1,10 +1,10 @@
-{application,k3,
+{application,sd,
              [{description,"An OTP application"},
               {vsn,"0.1.0"},
               {registered,[]},
-              {mod,{k3_app,[]}},
+              {mod,{sd_app,[]}},
               {applications,[kernel,stdlib]},
               {env,[]},
-              {modules,[k3_app,k3_lib,k3_server,k3_sup]},
+              {modules,[sd_app,sd_server,sd_sup]},
               {licenses,["Apache 2.0"]},
               {links,[]}]}.

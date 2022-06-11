@@ -65,8 +65,8 @@ start_needed_appl(ClusterId,LogDir,LogFileName)->
     nodelog_server:create(LogFile),
     
     nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start common ",CommonR}),
-    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start sd_app ",application:start(sd_app)}),
-    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start config_app ",application:start(config_app)}),
+    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start sd_app ",application:start(sd)}),
+    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start config_app ",application:start(config)}),
     nodelog_server:log(notice,?MODULE_STRING,?LINE,"server successfully started"),    
     ok.
 
@@ -117,27 +117,39 @@ create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,_Affinity,_K3Nodes)-
 			  
 create(0,_,_,_,Started,Failed)->	  
     {Started,Failed};
-create(N,ClusterName,Cookie,Type,Started,Failed)->
+create(N,ClusterName,Cookie,Type,Started,_Failed)->
     UniqueString=integer_to_list(erlang:system_time(microsecond),36),
-    PodId=ClusterName++"_"++Type++integer_to_list(N)++"_"++UniqueString,
-    PodDir=filename:join(ClusterName,PodId),
-    case pod_lib:create_pod(PodId,PodDir) of
-	{ok,PodNode}->
-	    true=erlang:monitor_node(PodNode,true),
-	    CommonR=pod_lib:load_start(PodNode,PodDir,"common","latest"),
-	    pod_lib:load_start(PodNode,PodDir,"nodelog","latest"),
-	    ok=file:make_dir(filename:join(PodDir,"logs")),
-	    LogFile=filename:join([PodDir,"logs",PodId++".log"]),
-	    rpc:call(PodNode,nodelog_server,create,[LogFile],5000),
-	    RSd=pod_lib:load_start(PodNode,PodDir,"sd_app","latest"),
-	    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start common ",CommonR}),
-	    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Result start sd_app ",RSd}),
-    	    NewStarted=[[{type,list_to_atom(Type)},{pod_id,PodId},{pod_dir,PodDir},{pod_node,PodNode},{created,{date(),time()}}]|Started],
-	    NewFailed=Failed;
-	{error,Reason}->
-	    NewFailed=[{Reason,PodId,PodDir,{date(),time()}}|Failed],
-	    NewStarted=Started
-    end,
+    NodeName=ClusterName++"_"++Type++integer_to_list(N)++"_"++UniqueString,
+    NodeDir=filename:join(ClusterName,NodeName),
+    ok=file:make_dir(NodeDir),
+    {ok,HostName}=net:gethostname(),
+    PaArgs=" ",
+    EnvArgs=" ",
+    
+    {ok,Node}=node_server:create(HostName,NodeDir,NodeName,Cookie,PaArgs,EnvArgs),
+    true=erlang:monitor_node(Node,true),
+    
+    %% start commonm
+    GitPathCommon=config_server:application_gitpath("common.spec"),
+    StartCmdCommon=config_server:application_start_cmd("common.spec"),
+    {ok,"common","0.1.0",_ApplDirCommon}=node_server:load_start_appl(Node,NodeDir,"common","0.1.0",GitPathCommon,StartCmdCommon),
+    %% start nodelog
+    GitPathNodelog=config_server:application_gitpath("nodelog.spec"),
+    StartCmdNodelog=config_server:application_start_cmd("nodelog.spec"),
+    {ok,"nodelog","0.1.0",_ApplDirNodelog}=node_server:load_start_appl(Node,NodeDir,"nodelog","0.1.0",GitPathNodelog,StartCmdNodelog),
+    ok=file:make_dir(filename:join(NodeDir,"logs")),
+    LogFile=filename:join([NodeDir,"logs",NodeName++".log"]),
+    rpc:call(Node,nodelog_server,create,[LogFile],5000),
+
+    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Started common"}),
+    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Started nodelog"}),
+   %% start sd
+    GitPathSd=config_server:application_gitpath("sd.spec"),
+    StartCmdSd=config_server:application_start_cmd("sd.spec"),
+    {ok,"sd","0.1.0",_ApplDirSd}=node_server:load_start_appl(Node,NodeDir,"sd","0.1.0",GitPathSd,StartCmdSd),
+    nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Started sd"}),	 
+    NewStarted=[[{type,list_to_atom(Type)},{node_name,NodeName},{node_dir,NodeDir},{node,Node},{created,{date(),time()}}]|Started],
+    NewFailed=[],
     create(N-1,ClusterName,Cookie,Type,NewStarted,NewFailed).
 
 %% --------------------------------------------------------------------
