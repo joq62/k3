@@ -37,6 +37,8 @@ init([]) ->
 		   start=>{config_server,start,[]}},
 		 #{id=>node,
 		   start=>{node_server,start,[]}},
+		 #{id=>nodelog,
+		   start=>{nodelog_server,start,[]}},
 		 #{id=>k3,
 		   start=>{k3_server,start,[]}}],
     {ok, {SupFlags, ChildSpecs}}.

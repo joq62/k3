@@ -147,27 +147,28 @@ init([]) ->
     NumWorkers=proplists:get_value(num_workers,Env),
     Affinity=proplists:get_value(affinty,Env),
     
-    %% Start Needed applications
-    LogDir="logs",
-    LogFileName="k3.log",
-
-    ok=application:start(nodelog),
+    % Create cluster main dir
     os:cmd("rm -rf "++ClusterId),
     ok=file:make_dir(ClusterId),
+
+    %% Init logging 
+    LogDir="logs",
+    LogFileName="k3.log",
     ok=file:make_dir(filename:join(ClusterId,LogDir)),
     LogFile=filename:join([ClusterId,LogDir,LogFileName]),
     nodelog_server:create(LogFile),    
 
-% k3_lib:start_needed_appl(ClusterId,LogDir,LogFileName),
+    % Start k3 on other hosts
+    AllK3Nodes=k3_lib:start_k3_on_hosts(ClusterId,Cookie),
+    
+    
 
     %% Start leader election to determ leader
 
  
     %% Create a new cluster   
 
-    K3NodeName=ClusterId++"_k3",
-    AllHostNames=[proplists:get_value(hostname,Info)||Info<-config_server:host_all_info()],
-    AllK3Nodes=[{HostName,list_to_atom(K3NodeName++"@"++HostName)}||HostName<-AllHostNames],
+   
     {ok,StartResult}=k3_lib:create_cluster(ClusterId,atom_to_list(Cookie),NumControllers,NumWorkers,Affinity,AllK3Nodes),
     nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterId," Cluster successfully created"}),
 	 

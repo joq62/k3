@@ -17,21 +17,112 @@
 %% --------------------------------------------------------------------
 %-compile(export_all).
 -export([
+	 start_k3_on_hosts/2,
 	 start_controllers/1,
 	 start_needed_appl/3,
 	 get_env/0,
 	 
-	 create_cluster/6,
-	 create_vm/5,
-	 delete_vm/1,
-	 delete_vm/2,
-	 git_load/4
+	 create_cluster/6
 	]).
 	 
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+start_k3_on_hosts(ClusterId,Cookie)->
+    
+    NodeName=ClusterId++"_k3",
+    {ok,MyHostName}=net:gethostname(),
+    AllHostNames=[proplists:get_value(hostname,Info)||Info<-config_server:host_all_info(),
+						      MyHostName/=proplists:get_value(hostname,Info)],
+						      
+    PaArgs=" ",
+    EnvArgs=" ",
+    ClusterDir=ClusterId,
+    AllK3Nodes=start_host_vm(AllHostNames,ClusterDir,NodeName,atom_to_list(Cookie),PaArgs,EnvArgs,[]),
+ %   {ok,HostNode,HostName}
+    
+    %% start node on each K3
+    ok=git_load_start_node(AllK3Nodes),
+    AllK3Nodes.
+
+
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+git_load_start_node([])->
+    ok;
+git_load_start_node([{ok,Node,_HostName,ClusterDir}|T])->
+    ApplDir=filename:join([ClusterDir,"node"]),
+    ok=rpc:call(Node,file,make_dir,[ApplDir],5000),
+    GitPath=config_server:application_gitpath("node.spec"),
+    {M,F,A}=config_server:application_start_cmd("node.spec"),
+   
+    TempDir="temp"++"_"++ClusterDir++".dir",
+    rpc:call(Node,os,cmd,["rm -rf "++TempDir],5000),
+    ok=rpc:call(Node,file,make_dir,[TempDir],5000),
+    rpc:call(Node,os,cmd,["git clone "++GitPath++" "++TempDir],5000),
+    rpc:call(Node,os,cmd,["mv  "++TempDir++"/*"++" "++ApplDir],5000),
+    rpc:call(Node,os,cmd,["rm -rf "++TempDir],5000),
+    Ebin=filename:join([ApplDir,"ebin"]),
+    true= rpc:call(Node,filelib,is_dir,[Ebin],5000),
+    true=rpc:call(Node,code,add_patha,[Ebin],5000),
+    ok=rpc:call(Node,M,F,A,2*5000),
+    pong=rpc:call(Node,node_server,ping,[],5000),
+    git_load_start_node(T).
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+
+start_host_vm([],_ClusterDir,_NodeName,_CookieStr,_PaArgs,_EnvArgs,AllK3Nodes)->
+    AllK3Nodes;
+start_host_vm([HostName|T],ClusterDir,NodeName,CookieStr,PaArgs,EnvArgs,Acc)->
+    NewAcc=case node_server:ssh_create(HostName,NodeName,CookieStr,PaArgs,EnvArgs) of
+	       {ok,HostNode}->
+		   case rpc:call(HostNode,os,cmd,["rm -rf "++ClusterDir],5000) of
+		       {badrpc,Reason}->
+			   nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Error reate node at host ",HostName,badrpc,Reason}),
+			   Acc;
+		       _->
+			   case rpc:call(HostNode,file,make_dir,[ClusterDir],5000) of
+			       {error,Reason}->
+				   nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Error failed to create node at host ",HostName,Reason}),
+				   Acc;
+			       ok->
+				   nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Cluster node  successfully created at host ",HostName," ",HostNode}),
+				   [{ok,HostNode,HostName,ClusterDir}|Acc]
+			   end
+		   end;
+	       {error,Reason}->
+		   nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Error failed to create node at host ",HostName,Reason}),
+		   Acc;
+	       Error ->
+		   nodelog_server:log(notice,?MODULE_STRING,?LINE,{"Error reate node at host ",HostName,Error}),
+		   Acc
+	   end,
+    start_host_vm(T,ClusterDir,NodeName,CookieStr,PaArgs,EnvArgs,NewAcc).
+    
+		   
+		   
+
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+
 
 start_controllers(StartedControllers)->
     ApplId="k3_controller",
@@ -152,95 +243,5 @@ create(N,ClusterName,Cookie,Type,Started,_Failed)->
     NewFailed=[],
     create(N-1,ClusterName,Cookie,Type,NewStarted,NewFailed).
 
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
-git_load(AppId,Vsn,GitPath,ServiceDir)->
-    AppDir=filename:join(ServiceDir,AppId++"_"++Vsn),
-    os:cmd("rm -rf "++AppDir),
-    ok=file:make_dir(AppDir),
-    TempDir="temp.dir",
-    os:cmd("rm -rf "++TempDir),
-    ok=file:make_dir(TempDir),
-    os:cmd("git clone "++GitPath++" "++TempDir),
-    os:cmd("mv  "++TempDir++"/*"++" "++AppDir),
-    os:cmd("rm -rf "++TempDir),
-    Ebin=filename:join(AppDir,"ebin"),
-    Reply=case filelib:is_dir(Ebin) of
-	      true->
-		  case code:add_patha(Ebin) of
-		      true->
-			  {ok,AppDir};
-		      Err ->
-			  {error,[Err]}
-		  end;
-	      false ->
-		  {error,[no_dir_created,?MODULE,?LINE]}
-	  end,
-    Reply.
-
-
-
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
-% NodeDir=filename:join(NodeName++".pod"),
-create_vm(HostName,NodeName,Cookie,PaArgs,EnvArgs)->
-  %  io:format("HostName ~p~n",[HostName]),
-  %  io:format("NodeName ~p~n",[NodeName]),
-  %  io:format("PaArgs ~p~n",[{PaArgs,?MODULE,?LINE}]),
-  %  io:format("Cookie ~p~n",[Cookie]),
-  %  io:format("EnvArgs ~p~n",[EnvArgs]),
-    
-
-    Args=PaArgs++" "++"-setcookie "++Cookie++" "++EnvArgs,
-    Result=case slave:start(HostName,NodeName,Args) of
-	       {error,Reason}->
-		   {error,[Reason]};
-	       {ok,SlaveNode}->
-		   case net_kernel:connect_node(SlaveNode) of
-		       false->
-			   {error,[failed_connect,SlaveNode]};
-		       ignored->
-			   {error,[ignored,SlaveNode]};
-		       true->
-			   {ok,SlaveNode}
-		   end
-	   end,
-    Result.
-
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% -------------------------------------------------------------------	       
-delete_vm(Node)->
-    slave:stop(Node).
-
-delete_vm(Node,Dir)->
-    slave:stop(Node),
-    os:cmd("rm -rf "++Dir),
-    timer:sleep(500),
-    ok.
-
-
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
- 
-
-%% --------------------------------------------------------------------
-%% Function:start/0 
-%% Description: Initiate the eunit tests, set upp needed processes etc
-%% Returns: non
-%% --------------------------------------------------------------------
-
-    
 
 

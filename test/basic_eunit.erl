@@ -23,8 +23,10 @@
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 start()->
-
     ok=start_k3(),
+    ok=start_node_c202(),
+
+  
 %    create_controllers(),
     io:format(" sd_server:all() ~p~n",[ sd_server:all()]),
     io:format(" sd_server:get(common) ~p~n",[ sd_server:get(common)]),
@@ -39,6 +41,31 @@ start()->
     ok.
 
 
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+start_node_c202()->
+    ClusterId="cluster1",
+    HostName="c202",
+    NodeName="k3"++"_"++ClusterId,
+    Node=list_to_atom(NodeName++"@"++HostName),
+    Kill=rpc:call(Node,init,stop,[],5000),
+    io:format("Kill = ~p~n",[Kill]),
+    Cookie=atom_to_list(erlang:get_cookie()),
+    Ip=config_server:host_local_ip(HostName),
+    SshPort=config_server:host_ssh_port(HostName),
+    Uid=config_server:host_uid(HostName),
+    Pwd=config_server:host_passwd(HostName),
+ 
+    Msg="erl -sname "++NodeName++" "++"-setcookie "++Cookie++" "++"-detached", 
+    Timeout=7000,
+    R=rpc:call(node(),my_ssh,ssh_send,[Ip,SshPort,Uid,Pwd,Msg,Timeout],Timeout-1000),
+    io:format("R = ~p~n",[R]),
+    pang=net_adm:ping(Node),
+    ok.
+    
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
