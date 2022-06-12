@@ -24,12 +24,12 @@
 %% --------------------------------------------------------------------
 start()->
     ok=start_k3(),
-    ok=start_node_c202(),
+  
 
   
 %    create_controllers(),
     io:format(" sd_server:all() ~p~n",[ sd_server:all()]),
-    io:format(" sd_server:get(common) ~p~n",[ sd_server:get(common)]),
+    io:format(" sd_server:get(common) ~p~n",[ sd_server:get(node)]),
     
     
    % [rpc:call(N,init,stop,[],1000)||N<-nodes()],

@@ -147,6 +147,13 @@ init([]) ->
     NumWorkers=proplists:get_value(num_workers,Env),
     Affinity=proplists:get_value(affinty,Env),
     
+    %% Start needed applications
+    ok=application:start(nodelog),
+    ok=application:start(sd),
+    ok=application:start(node),
+    ok=application:start(config),
+    
+
     % Create cluster main dir
     os:cmd("rm -rf "++ClusterId),
     ok=file:make_dir(ClusterId),
