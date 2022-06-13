@@ -17,12 +17,12 @@
 %% --------------------------------------------------------------------
 %-compile(export_all).
 -export([
-	 start_k3_on_hosts/2,
+	 start_k3_on_hosts/3,
 	 start_controllers/1,
 	 start_needed_appl/3,
 	 get_env/0,
 	 
-	 create_cluster/6
+	 create_cluster/5
 	]).
 	 
 
@@ -34,17 +34,17 @@
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-start_k3_on_hosts(ClusterId,Cookie)->
+start_k3_on_hosts(ClusterId,CookieStr,Hosts)->
     
     NodeName=ClusterId++"_k3",
     {ok,MyHostName}=net:gethostname(),
-    AllHostNames=[proplists:get_value(hostname,Info)||Info<-config_server:host_all_info(),
-						      MyHostName/=proplists:get_value(hostname,Info)],
+    AllHostNames=[HostName||HostName<-Hosts,
+			    MyHostName/=HostName],
 						      
     PaArgs=" ",
     EnvArgs=" ",
     ClusterDir=ClusterId,
-    AllK3Nodes=start_host_vm(AllHostNames,ClusterDir,NodeName,atom_to_list(Cookie),PaArgs,EnvArgs,[]),
+    AllK3Nodes=start_host_vm(AllHostNames,ClusterDir,NodeName,CookieStr,PaArgs,EnvArgs,[]),
  %   {ok,HostNode,HostName}
     
     %% start node on each K3
@@ -61,6 +61,16 @@ start_k3_on_hosts(ClusterId,Cookie)->
 git_load_start_node([])->
     ok;
 git_load_start_node([{ok,Node,_HostName,ClusterDir}|T])->
+    %% copy host_info_specs and deployments
+    ok=rpc:call(Node,file,make_dir,[filename:join([ClusterDir,"host_info_specs"])],5000),
+    rpc:call(Node,os,cmd,["cp host_info_specs/* "++filename:join([ClusterDir,"host_info_specs"])]),
+    ok=rpc:call(Node,file,make_dir,[filename:join([ClusterDir,"deployments"])],5000),
+    rpc:call(Node,os,cmd,["cp host_info_specs/* "++filename:join([ClusterDir,"deployments"])]),
+
+    %% git clone application and deployment specs
+  GitPathApplicationInfo=config_server:deployment_spec_applicatioapplication_gitpath("node.spec"),
+
+
     ApplDir=filename:join([ClusterDir,"node"]),
     ok=rpc:call(Node,file,make_dir,[ApplDir],5000),
     GitPath=config_server:application_gitpath("node.spec"),
@@ -75,9 +85,12 @@ git_load_start_node([{ok,Node,_HostName,ClusterDir}|T])->
     Ebin=filename:join([ApplDir,"ebin"]),
     true= rpc:call(Node,filelib,is_dir,[Ebin],5000),
     true=rpc:call(Node,code,add_patha,[Ebin],5000),
+    true=rpc:call(Node,code,add_patha,[ClusterDir],5000),
+    true=rpc:call(Node,code,add_patha,[ClusterDir++"/*"],5000),
     ok=rpc:call(Node,M,F,A,2*5000),
     pong=rpc:call(Node,node_server,ping,[],5000),
     git_load_start_node(T).
+
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -161,7 +174,7 @@ start_needed_appl(ClusterId,LogDir,LogFileName)->
     nodelog_server:log(notice,?MODULE_STRING,?LINE,"server successfully started"),    
     ok.
 
-%% --------------------------------------------------------------------
+%% ---------------------------------------------------0-----------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
@@ -174,15 +187,15 @@ get_env()->
     {ok,NumWorkers}=application:get_env(num_workers),
   %  NumWorkers=list_to_integer(atom_to_list(NumWorkersAtom)),
     true=is_integer(NumWorkers),
-    {ok,AffinityAtom}=application:get_env(affinity),
-    true=is_list(AffinityAtom),
-    Affinity=[atom_to_list(Host)||Host<-AffinityAtom],
+    {ok,HostsAtom}=application:get_env(hosts),
+    true=is_list(HostsAtom),
+    Hosts=[atom_to_list(Host)||Host<-HostsAtom],
     Cookie=erlang:get_cookie(),
     [{cluster_id,ClusterId},
      {cookie,Cookie},
      {num_controllers,NumControllers},
      {num_workers,NumWorkers},
-     {affinity,Affinity}].
+     {hosts,Hosts}].
 
 
 %% --------------------------------------------------------------------
@@ -190,7 +203,7 @@ get_env()->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,_Affinity,_K3Nodes)->
+create_cluster(ClusterName,Cookie,NumControllers,NumWorkers,_K3Nodes)->
     os:cmd("rm -rf "++ClusterName),
     Reply=case file:make_dir(ClusterName) of
 	      {error,Reason}->

@@ -6,6 +6,6 @@
               {applications,[kernel,stdlib]},
               {env,[]},
               {modules,[appl_lib,config_app,config_server,config_sup,
-                        deployment_lib,host,host_lib]},
+                        deployment_lib,deployment_spec_lib,host_lib]},
               {licenses,["Apache 2.0"]},
               {links,[]}]}.

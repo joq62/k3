@@ -1,2 +1,2 @@
-make eunit sname=cluster1_k3 cookie=cluster1_cookie clusterid=cluster1 num_controllers=2 num_workers=2 affinity=["c100","c202"]
+make eunit sname=cluster1_k3 clusterid=cluster1 deployment_file=cluster1
 

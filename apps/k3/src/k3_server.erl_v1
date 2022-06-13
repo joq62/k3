@@ -17,8 +17,6 @@
 %% --------------------------------------------------------------------
 -define(SERVER,?MODULE).
 -define(LogDir,"logs").
--define(DeplSpecExtension,".depl_spec").
-
 %% External exports
 -export([
 	
@@ -141,30 +139,25 @@ ping()->
 %% --------------------------------------------------------------------
 init([]) ->
 
- %% Start needed applications
+    %% Check start parameters
+    Env=k3_lib:get_env(),
+    ClusterId=proplists:get_value(cluster_id,Env),
+    Cookie=proplists:get_value(cookie,Env),
+    NumControllers=proplists:get_value(num_controllers,Env),
+    NumWorkers=proplists:get_value(num_workers,Env),
+    Hosts=proplists:get_value(hosts,Env),
+    
+    %% Start needed applications
     ok=application:start(nodelog),
     ok=application:start(sd),
     ok=application:start(node),
     ok=application:start(config),
-  
-  %% Check start parameters
-    {ok,DeploymentFileBasenameAtom}=application:get_env(deployment_file),
-    DeploymentFileName=atom_to_list(DeploymentFileBasenameAtom)++?DeplSpecExtension,
- %% Not needed!!   DeplFile=code:where_is_file(DeploymentFileName),
-    ClusterId=config_server:deployment_spec_name(DeploymentFileName),
-    CookieStr=config_server:deployment_spec_cookie(DeploymentFileName),
-    NumControllers=config_server:deployment_spec_controllers(DeploymentFileName),
-    NumWorkers=config_server:deployment_spec_workers(DeploymentFileName),
-    Hosts=config_server:deployment_spec_hosts(DeploymentFileName),
-    Deployments=config_server:deployment_spec_deployments(DeploymentFileName),
     
-    io:format("~p~n",[{ClusterId,CookieStr,NumControllers,NumWorkers,Hosts,Deployments}]),
-    
-    true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
-    
-    
-    
-    
+
+    % Create cluster main dir
+    os:cmd("rm -rf "++ClusterId),
+    ok=file:make_dir(ClusterId),
+
     %% Init logging 
     LogDir="logs",
     LogFileName="k3.log",
@@ -173,7 +166,7 @@ init([]) ->
     nodelog_server:create(LogFile),    
 
     % Start k3 on other hosts
-    AllK3Nodes=k3_lib:start_k3_on_hosts(ClusterId,CookieStr,Hosts),
+    AllK3Nodes=k3_lib:start_k3_on_hosts(ClusterId,Cookie,Hosts),
     
     
 
@@ -183,7 +176,7 @@ init([]) ->
     %% Create a new cluster   
 
    
-    {ok,StartResult}=k3_lib:create_cluster(ClusterId,CookieStr,NumControllers,NumWorkers,AllK3Nodes),
+    {ok,StartResult}=k3_lib:create_cluster(ClusterId,atom_to_list(Cookie),NumControllers,NumWorkers,AllK3Nodes),
     nodelog_server:log(notice,?MODULE_STRING,?LINE,{ClusterId," Cluster successfully created"}),
 	 
     {StartedControllers,FailedControllers}=proplists:get_value(controllers,StartResult),    
@@ -192,7 +185,7 @@ init([]) ->
     
     {ok, #state{
 	    cluster_id=ClusterId,
-	    cookie=CookieStr,
+	    cookie=Cookie,
 	    num_controllers=NumControllers,
 	    num_workers=NumWorkers,
 	    k3_nodes=AllK3Nodes,
