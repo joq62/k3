@@ -145,18 +145,13 @@ init([]) ->
     ok=application:start(nodelog),
     ok=application:start(sd),
     ok=application:start(node),
-    ok=k3_lib:load_config_files(),
     ok=application:start(config),
-    ok=k3_lib:init_etcd(),
-
-    io:format("~p~n",[mnesia:system_info()]),
+    ok=application:start(etcd),
     
-    {ok,DeploymentFileBasenameAtom}=application:get_env(deployment_file),
-    DeploymentFileName=atom_to_list(DeploymentFileBasenameAtom)++?DeplSpecExtension,  
-    gl=DeploymentFileName,
     
   %% Check start parameters
-  
+    {ok,DeploymentFileBasenameAtom}=application:get_env(deployment_file),
+    DeploymentFileName=atom_to_list(DeploymentFileBasenameAtom)++?DeplSpecExtension,
  %% Not needed!!   DeplFile=code:where_is_file(DeploymentFileName),
     ClusterId=config_server:deployment_spec_name(DeploymentFileName),
     CookieStr=config_server:deployment_spec_cookie(DeploymentFileName),

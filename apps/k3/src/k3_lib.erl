@@ -17,6 +17,7 @@
 %% --------------------------------------------------------------------
 %-compile(export_all).
 -export([
+	 init_etcd/0,
 	 start_k3_on_hosts/3,
 	 start_controllers/1,
 	 start_needed_appl/3,
@@ -29,6 +30,21 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+init_etcd()->
+    ok=etcd_server:appl_start([]),
+    pong=etcd_server:ping(), 
+    ok=etcd_server:dynamic_db_init([]),
+    ok=db_host_spec:init_table(),
+    ok=db_application_spec:init_table(),
+    ok=db_deployment_info:init_table(),
+    ok=db_deployments:init_table(),
+    ok.
+
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
