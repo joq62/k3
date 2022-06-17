@@ -96,11 +96,13 @@ ping()->
 %% --------------------------------------------------------------------
 init([]) ->
     ok=application:start(sd),
-    ok=application:start(node),
-    ok=application:start(etcd),
-    ok=etcd_server:dynamic_db_init([]),
+ %   ok=application:start(etcd),
+    [EtcdNode|_]=sd:get(etcd),
+  %  ok=etcd_server:dynamic_db_init([]),
     {ok,DeploymentName}=application:get_env(deployment_name),
-    {ok,ClusterId}=db_deployments:read(name,DeploymentName),
+    {ok,ClusterId}=rpc:call(EtcdNode,db_deployments,read,[name,DeploymentName],5000),
+    ok=application:start(node),
+
    %% Init logging 
     LogDir="logs",
     LogFileName="k3.log",
