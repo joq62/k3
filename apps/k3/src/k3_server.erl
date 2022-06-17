@@ -95,15 +95,23 @@ ping()->
 %% --------------------------------------------------------------------
 init([]) ->
 
- %% Start needed applications
+    {ok,DeploymentName}=application:get_env(deployment_name),
+    {ok,ClusterId}=db_deployments:read(name,DeploymentName),
+   %% Init logging 
+    LogDir="logs",
+    LogFileName="k3.log",
+    ok=file:make_dir(LogDir),
+    LogFile=filename:join([ClusterId,LogDir,LogFileName]),
     ok=application:start(nodelog),
+    nodelog_server:create(LogFile),    
+
+    nodelog_server:create(LogFile),
     ok=application:start(sd),
     ok=application:start(node),
     ok=application:start(etcd),
     ok=etcd_server:dynamic_db_init([]),
     
-   
-    
+        
     {ok, #state{
 	    start_time={date(),time()}
 	   }
