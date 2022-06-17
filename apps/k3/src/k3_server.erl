@@ -89,12 +89,16 @@ ping()->
 %% Function: init/1
 %% Description: Initiates the server
 %% Returns: {ok, State}          |
+
 %%          {ok, State, Timeout} |
 %%          ignore               |
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-
+    ok=application:start(sd),
+    ok=application:start(node),
+    ok=application:start(etcd),
+    ok=etcd_server:dynamic_db_init([]),
     {ok,DeploymentName}=application:get_env(deployment_name),
     {ok,ClusterId}=db_deployments:read(name,DeploymentName),
    %% Init logging 
@@ -103,14 +107,7 @@ init([]) ->
     ok=file:make_dir(LogDir),
     LogFile=filename:join([ClusterId,LogDir,LogFileName]),
     ok=application:start(nodelog),
-    nodelog_server:create(LogFile),    
-
-    nodelog_server:create(LogFile),
-    ok=application:start(sd),
-    ok=application:start(node),
-    ok=application:start(etcd),
-    ok=etcd_server:dynamic_db_init([]),
-    
+    nodelog_server:create(LogFile),      
         
     {ok, #state{
 	    start_time={date(),time()}
