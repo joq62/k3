@@ -100,7 +100,8 @@ init([]) ->
     ok=application:start(sd),
     ok=application:start(node),
     ok=application:start(etcd),
-
+    ok=etcd_server:dynamic_db_init([]),
+    
    
     
     {ok, #state{

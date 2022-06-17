@@ -12,7 +12,7 @@
   0},
  {<<"node">>,
   {git,"https://github.com/joq62/node.git",
-       {ref,"0332bd3a04f259be1f761d685795de642eff6166"}},
+       {ref,"e728ed4667ab54f84e866cf313b47282068cb89b"}},
   0},
  {<<"nodelog">>,
   {git,"https://github.com/joq62/nodelog.git",
