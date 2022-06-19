@@ -37,7 +37,7 @@ start_k3()->
     {ok,CookieStr}=db_deployments:read(cookie,DeploymentName),
     {ok,Hosts}=db_deployments:read(hosts,DeploymentName),
    
- true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
+    true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
     NodeName=ClusterId++"_"++"node",
     PaArgs=" ",
     EnvArgs=" ",
@@ -95,7 +95,8 @@ k3_init(Node,NodeDir,DeploymentName)->
     {ok,ApplVsn}=db_application_spec:read(vsn,NodeAppl),
     {ok,GitPath}=db_application_spec:read(gitpath,NodeAppl),
     {ok,StartCmd}=db_application_spec:read(cmd,NodeAppl),
-    
+    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+					{"DEBUG, StartCmd ",?FUNCTION_NAME," ",StartCmd,Node}]),
     ok=rpc:call(Node,application,set_env,[[{k3,[{deployment_name,DeploymentName}]}]],5000),
     {ok,"k3.spec",_,_}=node_server:load_start_appl(Node,NodeDir,ApplId,ApplVsn,GitPath,StartCmd),
     pong=rpc:call(Node,k3_server,ping,[],5000),
