@@ -55,7 +55,7 @@ start_k3()->
 
 start(HostName,NodeName,CookieStr,PaArgs,EnvArgs,_Appl,NodeDirBase,DeploymentName)->
     {ok,Node,NodeDir}=create_node(HostName,NodeName,CookieStr,PaArgs,EnvArgs,NodeDirBase),
-    ok=common_init(Node,NodeDir),
+ %   ok=common_init(Node,NodeDir),
     ok=etcd_init(Node,NodeDir),
     ok=sd_init(Node,NodeDir),
     ok=nodelog_init(Node,NodeDir),    

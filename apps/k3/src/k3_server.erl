@@ -98,8 +98,8 @@ ping()->
 init([]) ->
     
     {ok,DeploymentName}=application:get_env(deployment_name),
-    rpc:cast(node(),nodelog_server,log,[info,?MODULE_STRING,?LINE,
-					{"succesful started server at  node ",?MODULE,node()}]),
+    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+					{"OK, started server at node  ",?MODULE," ",node()}]),
     {ok, #state{
 	    deployment_name=DeploymentName,
 	    start_time={date(),time()}
