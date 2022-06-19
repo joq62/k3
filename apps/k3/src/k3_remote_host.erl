@@ -4,7 +4,7 @@
 %%% 
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(remote_host).   
+-module(k3_remote_host).    
     
 %% --------------------------------------------------------------------
 %% Include files
@@ -55,6 +55,7 @@ start_k3()->
 
 start(HostName,NodeName,CookieStr,PaArgs,EnvArgs,_Appl,NodeDirBase,DeploymentName)->
     {ok,Node,NodeDir}=create_node(HostName,NodeName,CookieStr,PaArgs,EnvArgs,NodeDirBase),
+    ok=common_init(Node,NodeDir),
     ok=etcd_init(Node,NodeDir),
     ok=sd_init(Node,NodeDir),
     ok=nodelog_init(Node,NodeDir),    
@@ -182,6 +183,23 @@ etcd_init(Node,NodeDir)->
 						       {"OK, Started application at  node ",etcd," ",Node}]),
     ok.
     
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+common_init(Node,NodeDir)->
+    NodeAppl="common.spec",
+    {ok,ApplId}=db_application_spec:read(name,NodeAppl),
+    {ok,ApplVsn}=db_application_spec:read(vsn,NodeAppl),
+    {ok,GitPath}=db_application_spec:read(gitpath,NodeAppl),
+    {ok,StartCmd}=db_application_spec:read(cmd,NodeAppl),
+
+    {ok,"common.spec",_,_}=node_server:load_start_appl(Node,NodeDir,ApplId,ApplVsn,GitPath,StartCmd),
+    pong=rpc:call(Node,common_server,ping,[],5000),
+    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+						       {"OK, Started application at  node ",common," ",Node}]),
+    ok.
     
 %% --------------------------------------------------------------------
 %% Function:start/0 
