@@ -5,6 +5,7 @@
               {mod,{k3_app,[]}},
               {applications,[kernel,stdlib]},
               {env,[]},
-              {modules,[k3_app,k3_lib,k3_server,k3_sup]},
+              {modules,[k3_app,k3_lib,k3_orchistrate,k3_server,k3_sup,
+                        remote_host]},
               {licenses,["Apache 2.0"]},
               {links,[]}]}.

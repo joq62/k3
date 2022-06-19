@@ -12,7 +12,7 @@
   0},
  {<<"node">>,
   {git,"https://github.com/joq62/node.git",
-       {ref,"1616b5e6e135296af912335642d53e7ee4d52b4d"}},
+       {ref,"282bb585b3264807a6f2ea181ca3aaec615ed32c"}},
   0},
  {<<"nodelog">>,
   {git,"https://github.com/joq62/nodelog.git",
@@ -20,5 +20,5 @@
   0},
  {<<"sd">>,
   {git,"https://github.com/joq62/sd.git",
-       {ref,"0e8276a51420cb4a8bf07d00e5009512cbfb865d"}},
+       {ref,"2e9d6d4218b5734aebe1c84ab84fe3b9c6fe98f0"}},
   0}].
