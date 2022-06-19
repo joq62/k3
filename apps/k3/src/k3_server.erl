@@ -37,6 +37,7 @@
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
+		deployment_name,
 		start_time=undefined
 	       }).
 
@@ -95,23 +96,12 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    ok=application:start(sd),
- %   ok=application:start(etcd),
-    [EtcdNode|_]=sd_server:get(etcd),
-  %  ok=etcd_server:dynamic_db_init([]),
+    
     {ok,DeploymentName}=application:get_env(deployment_name),
-    {ok,ClusterId}=rpc:call(EtcdNode,db_deployments,read,[name,DeploymentName],5000),
-    ok=application:start(node),
-
-   %% Init logging 
-    LogDir="logs",
-    LogFileName="k3.log",
-    ok=file:make_dir(LogDir),
-    LogFile=filename:join([ClusterId,LogDir,LogFileName]),
-    ok=application:start(nodelog),
-    nodelog_server:create(LogFile),      
-        
+    rpc:cast(node(),nodelog_server,log,[info,?MODULE_STRING,?LINE,
+					{"succesful started server at  node ",?MODULE,node()}]),
     {ok, #state{
+	    deployment_name=DeploymentName,
 	    start_time={date(),time()}
 	   }
     }.
