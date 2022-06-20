@@ -17,7 +17,8 @@
 %% --------------------------------------------------------------------
 %-compile(export_all).
 -export([
-	 start_k3/0
+	 start_k3/1,
+	 start_k3/2
 %	 start/8
 	]).
 	 
@@ -30,11 +31,33 @@
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-start_k3()->
+start_k3(HostName,DeploymentName)->
+    {ok,ClusterId}=db_deployments:read(name,DeploymentName),
+    {ok,CookieStr}=db_deployments:read(cookie,DeploymentName),
+    NodeName=ClusterId++"_"++"node",
+    PaArgs=" ",
+    EnvArgs=" ",
+    NodeDirBase=ClusterId,    
+     
+    {ok,Node,NodeDir}=create_node(HostName,NodeName,CookieStr,PaArgs,EnvArgs,NodeDirBase),
+    ok=common_init(Node,NodeDir),
+    ok=etcd_init(Node,NodeDir),
+    ok=sd_init(Node,NodeDir),
+    ok=nodelog_init(Node,NodeDir),    
+    ok=node_init(Node,NodeDir), 
+    ok=k3_init(Node,NodeDir,DeploymentName),
+    ok=leader_init(Node,NodeDir),  
+    {ok,Node,NodeDir,HostName}.
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+
+start_k3(DeploymentName)->
     F1 = fun start/2,
     F2= fun start_result/3,
-    {ok,DeploymentNameAtom}=application:get_env(deployment_name),
-    DeploymentName=atom_to_list(DeploymentNameAtom),  
     {ok,ClusterId}=db_deployments:read(name,DeploymentName),
     {ok,CookieStr}=db_deployments:read(cookie,DeploymentName),
     {ok,Hosts}=db_deployments:read(hosts,DeploymentName),
@@ -46,7 +69,6 @@ start_k3()->
     L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}||HostName<-Hosts],
     true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
     [{StartResult,start_k3}]=common:mapreduce(F1,F2,[],L),
-    io:format("StartResultR ~p~n",[StartResult]),
     StartResult.
     
    
