@@ -51,11 +51,11 @@ desired_state(DeploymentName)->
     HostsToRestart=lists:append([MissingHosts,FailedK3Hosts]),
     Reply=case HostsToRestart of
 	      []->
-		  ok;
-	      [HostName|_]->
+		  [];
+	      _->
 		  rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
 						{" HostsToRestart  ",?MODULE," ",HostsToRestart}]),
-		  k3_remote_host:start_k3(HostName,DeploymentName)
+		  [k3_remote_host:start_k3(HostName,DeploymentName)||HostName<-HostsToRestart]
 	  end,
     Reply.
 
