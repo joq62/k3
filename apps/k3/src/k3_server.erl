@@ -18,7 +18,7 @@
 -define(SERVER,?MODULE).
 -define(LogDir,"logs").
 -define(DeplSpecExtension,".depl_spec").
--define(Interval,10*1000).
+-define(Interval,60*1000).
 
 %% External exports
 -export([
