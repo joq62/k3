@@ -43,13 +43,14 @@ desired_state(DeploymentName)->
     AllK3Hosts=[rpc:call(Node,net,gethostname,[],5000)||Node<-AllK3Nodes],
     MissingHosts=[HostName||HostName<-Hosts,
 			    false=:=lists:member({ok,HostName},AllK3Hosts)],
-    glurk=MissingHosts,
+
     FailedK3HostsNodes=[rpc:call(Node,net,gethostname,[],5000)||Node<-AllK3Nodes,
 								      pong/=rpc:call(Node,k3_server,ping,[],5000)],
-    HostsToRestart=[HostName||{ok,HostName}<-FailedK3HostsNodes],
+    FailedK3Hosts=[HostName||{ok,HostName}<-FailedK3HostsNodes],
     
-    glurk=lists:append([MissingHosts,HostsToRestart]),
-    
+    HostsToRestart=lists:append([MissingHosts,FailedK3Hosts]),
+    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+					{"DEBUG , HostsToRestart  ",?MODULE," ",HostsToRestart}]),
     ok.
 
 

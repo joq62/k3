@@ -65,8 +65,11 @@ start_k3(DeploymentName)->
     PaArgs=" ",
     EnvArgs=" ",
     Appl="k3.spec",
-    NodeDirBase=ClusterId,    
-    L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}||HostName<-Hosts],
+    NodeDirBase=ClusterId,   
+    [HostName|_]=Hosts,
+    L={HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName},
+    
+ %   L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}||HostName<-Hosts],
     true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
     [{StartResult,start_k3}]=common:mapreduce(F1,F2,[],L),
     StartResult.

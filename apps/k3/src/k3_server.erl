@@ -18,10 +18,11 @@
 -define(SERVER,?MODULE).
 -define(LogDir,"logs").
 -define(DeplSpecExtension,".depl_spec").
+-define(Interval,30*1000).
 
 %% External exports
 -export([
-
+	 desired_state_check/0,
 
 	 appl_start/1,
 	 ping/0
@@ -83,6 +84,10 @@ stop()-> gen_server:call(?SERVER, {stop},infinity).
 ping()-> 
     gen_server:call(?SERVER, {ping},infinity).
 
+
+desired_state_check()->
+    gen_server:cast(?SERVER, {desired_state_check}).
+
 %% ====================================================================
 %% Gen Server functions
 %% ====================================================================
@@ -100,6 +105,8 @@ init([]) ->
     {ok,DeploymentName}=application:get_env(deployment_name),
     rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
 					{"OK, started server at node  ",?MODULE," ",node()}]),
+    spawn(fun()->local_desired_state_check(DeploymentName) end),
+    
     {ok, #state{
 	    deployment_name=DeploymentName,
 	    start_time={date(),time()}
@@ -148,6 +155,11 @@ handle_call(Request, From, State) ->
 %% --------------------------------------------------------------------
 
 
+
+handle_cast({desired_state_check}, State) ->
+    spawn(fun()->local_desired_state_check(State#state.deployment_name) end),
+    {noreply, State};
+
 handle_cast(_Msg, State) ->
   %  rpc:cast(node(),log,log,[?Log_ticket("unmatched cast",[Msg])]),
     {noreply, State}.
@@ -187,4 +199,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %% --------------------------------------------------------------------
 
-		  
+local_desired_state_check(DeploymentName)->		  
+    timer:sleep(?Interval),
+    case leader_server:am_i_leader(node()) of
+	true->
+	    rpc:call(node(),k3_orchistrate,desired_state,[DeploymentName],20*1000);
+	false ->
+	    ok
+    end,
+    rpc:cast(node(),k3_server,desired_state_check,[]).
