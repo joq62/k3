@@ -67,7 +67,7 @@ start_k3(DeploymentName)->
     Appl="k3.spec",
     NodeDirBase=ClusterId,   
     [HostName|_]=Hosts,
-    L={HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName},
+    L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}],
     
  %   L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}||HostName<-Hosts],
     true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
