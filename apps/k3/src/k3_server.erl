@@ -199,7 +199,9 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %% --------------------------------------------------------------------
 
-local_desired_state_check(DeploymentName)->		  
+local_desired_state_check(DeploymentName)->	
+    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+					{"DEBUG,  ",?MODULE," ",?LINE," ",node()}]),	  
     timer:sleep(?Interval),
     case leader_server:am_i_leader(node()) of
 	true->
