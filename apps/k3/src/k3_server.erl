@@ -18,7 +18,7 @@
 -define(SERVER,?MODULE).
 -define(LogDir,"logs").
 -define(DeplSpecExtension,".depl_spec").
--define(Interval,30*1000).
+-define(Interval,10*1000).
 
 %% External exports
 -export([
@@ -200,8 +200,6 @@ code_change(_OldVsn, State, _Extra) ->
 %% --------------------------------------------------------------------
 
 local_desired_state_check(DeploymentName)->	
-    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
-					{"DEBUG,  ",?MODULE," ",?LINE," ",node()}]),	  
     timer:sleep(?Interval),
     case leader_server:am_i_leader(node()) of
 	true->
@@ -209,6 +207,4 @@ local_desired_state_check(DeploymentName)->
 	false ->
 	    ok
     end,
-    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
-					{"DEBUG,  ",?MODULE," ",?LINE," ",node()}]),
     rpc:cast(node(),k3_server,desired_state_check,[]).

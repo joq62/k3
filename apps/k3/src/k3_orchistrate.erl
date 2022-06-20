@@ -49,9 +49,15 @@ desired_state(DeploymentName)->
     FailedK3Hosts=[HostName||{ok,HostName}<-FailedK3HostsNodes],
     
     HostsToRestart=lists:append([MissingHosts,FailedK3Hosts]),
-    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
-					{"DEBUG , HostsToRestart  ",?MODULE," ",HostsToRestart}]),
-    ok.
+    Reply=case HostsToRestart of
+	      []->
+		  ok;
+	      [HostName|_]->
+		  rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+						{" HostsToRestart  ",?MODULE," ",HostsToRestart}]),
+		  k3_remote_host:start_k3(HostName,DeploymentName)
+	  end,
+    Reply.
 
 
 is_k3_alive(_K3Node)->
