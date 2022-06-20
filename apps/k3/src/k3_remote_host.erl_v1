@@ -17,8 +17,8 @@
 %% --------------------------------------------------------------------
 %-compile(export_all).
 -export([
-	 start_k3/0
-%	 start/8
+	 start_k3/0,
+	 start/8
 	]).
 	 
 
@@ -31,24 +31,19 @@
 %% Returns: non
 %% --------------------------------------------------------------------
 start_k3()->
-    F1 = fun start/2,
-    F2= fun start_result/3,
     {ok,DeploymentNameAtom}=application:get_env(deployment_name),
     DeploymentName=atom_to_list(DeploymentNameAtom),  
     {ok,ClusterId}=db_deployments:read(name,DeploymentName),
     {ok,CookieStr}=db_deployments:read(cookie,DeploymentName),
     {ok,Hosts}=db_deployments:read(hosts,DeploymentName),
+   
+    true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
     NodeName=ClusterId++"_"++"node",
     PaArgs=" ",
     EnvArgs=" ",
     Appl="k3.spec",
     NodeDirBase=ClusterId,    
-    L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}||HostName<-Hosts],
-    true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
-    [{StartResult,start_k3}]=common:mapreduce(F1,F2,[],L),
-    io:format("StartResultR ~p~n",[StartResult]),
-    StartResult.
-    
+    [start(HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName)||HostName<-Hosts].
    
 
 %% --------------------------------------------------------------------
@@ -56,8 +51,9 @@ start_k3()->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-start(Pid,{HostName,NodeName,CookieStr,PaArgs,EnvArgs,_Appl,NodeDirBase,DeploymentName})->
-   
+
+
+start(HostName,NodeName,CookieStr,PaArgs,EnvArgs,_Appl,NodeDirBase,DeploymentName)->
     {ok,Node,NodeDir}=create_node(HostName,NodeName,CookieStr,PaArgs,EnvArgs,NodeDirBase),
     ok=common_init(Node,NodeDir),
     ok=etcd_init(Node,NodeDir),
@@ -66,10 +62,7 @@ start(Pid,{HostName,NodeName,CookieStr,PaArgs,EnvArgs,_Appl,NodeDirBase,Deployme
     ok=node_init(Node,NodeDir), 
     ok=k3_init(Node,NodeDir,DeploymentName),
     ok=leader_init(Node,NodeDir),  
-    Pid!{start_k3,{ok,Node,NodeDir,HostName}}.
-
-start_result(Key,Vals,Acc)->
-    [{Vals,Key}|Acc].
+    {ok,Node,NodeDir,HostName}.
 
 
 %% --------------------------------------------------------------------
