@@ -52,10 +52,11 @@ desired_state(DeploymentName)->
     Reply=case HostsToRestart of
 	      []->
 		  [];
-	      _->
+	      [HostName|_]->
 		  rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
 						{" HostsToRestart  ",?MODULE," ",HostsToRestart}]),
-		  [k3_remote_host:start_k3(HostName,DeploymentName)||HostName<-HostsToRestart]
+		  k3_remote_host:start_k3(HostName,DeploymentName)		  
+		%  [k3_remote_host:start_k3(HostName,DeploymentName)||HostName<-HostsToRestart]
 	  end,
     Reply.
 
