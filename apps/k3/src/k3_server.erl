@@ -207,4 +207,6 @@ local_desired_state_check(DeploymentName)->
 	false ->
 	    ok
     end,
+    rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+					{"DEBUG,  ",?MODULE," ",?LINE," ",node()}]),
     rpc:cast(node(),k3_server,desired_state_check,[]).
