@@ -203,7 +203,7 @@ local_desired_state_check(DeploymentName)->
     timer:sleep(?Interval),
     case leader_server:am_i_leader(node()) of
 	true->
-	    rpc:call(node(),k3_orchistrate,desired_state,[DeploymentName],20*1000);
+	    rpc:call(node(),k3_orchistrate,desired_state,[DeploymentName],5*60*1000);
 	false ->
 	    ok
     end,
