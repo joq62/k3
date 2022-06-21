@@ -39,13 +39,13 @@
 %% --------------------------------------------------------------------
 desired_state(DeploymentName)->
     {ok,Hosts}=db_deployments:read(hosts,DeploymentName),
-    AllK3Nodes=sd_server:get(k3),
+    AllK3Nodes=sd:get(k3),
     AllK3Hosts=[rpc:call(Node,net,gethostname,[],5000)||Node<-AllK3Nodes],
     MissingHosts=[HostName||HostName<-Hosts,
 			    false=:=lists:member({ok,HostName},AllK3Hosts)],
 
     FailedK3HostsNodes=[rpc:call(Node,net,gethostname,[],5000)||Node<-AllK3Nodes,
-								      pong/=rpc:call(Node,k3_server,ping,[],5000)],
+								      pong/=rpc:call(Node,k3,ping,[],5000)],
     FailedK3Hosts=[HostName||{ok,HostName}<-FailedK3HostsNodes],
     
     HostsToRestart=lists:append([MissingHosts,FailedK3Hosts]),
@@ -53,7 +53,7 @@ desired_state(DeploymentName)->
 	      []->
 		  [];
 	      [HostName|_]->
-		  rpc:cast(node(),nodelog_server,log,[notice,?MODULE_STRING,?LINE,
+		  rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
 						{" HostsToRestart  ",?MODULE," ",HostsToRestart}]),
 		  k3_remote_host:start_k3(HostName,DeploymentName)		  
 		%  [k3_remote_host:start_k3(HostName,DeploymentName)||HostName<-HostsToRestart]
