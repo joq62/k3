@@ -42,7 +42,7 @@ desired_state(DeploymentName)->
     AllK3Nodes=sd:get(k3),
     rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
 				 {"DEBUG: AllK3Nodes   ",AllK3Nodes}]),
-    AllK3Hosts=[rpc:call(Node,net,gethostname,[],5000)||Node<-AllK3Nodes],
+    AllK3Hosts=[rpc:call(Node,net,gethostname,[],5000)||{Node,_}<-AllK3Nodes],
     rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
 				 {"DEBUG: AllK3Hosts   ",AllK3Hosts}]),
 
