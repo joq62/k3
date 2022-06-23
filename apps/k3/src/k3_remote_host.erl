@@ -131,7 +131,7 @@ k3_controller_init(Node,NodeDir,DeploymentName)->
     {ok,StartCmd}=db_application_spec:read(cmd,NodeAppl),
     
     ok=rpc:call(Node,application,set_env,[[{k3_controller,[{deployment_name,DeploymentName}]}]],5000),
-    {ok,"k3.spec",_,_}=node:load_start_appl(Node,NodeDir,ApplId,ApplVsn,GitPath,StartCmd),
+    {ok,"k3_controller.spec",_,_}=node:load_start_appl(Node,NodeDir,ApplId,ApplVsn,GitPath,StartCmd),
     pong=rpc:call(Node,k3_controller,ping,[],5000),
     rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
 					{"OK, Started application at  node ",k3_controller," ",Node}]),
