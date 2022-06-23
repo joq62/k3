@@ -52,7 +52,7 @@ desired_state(DeploymentName)->
     rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
 				 {"DEBUG: MissingHosts   ",MissingHosts}]),
 
-    FailedK3HostsNodes=[rpc:call(Node,net,gethostname,[],5000)||Node<-AllK3Nodes,
+    FailedK3HostsNodes=[rpc:call(Node,net,gethostname,[],5000)||{Node,_}<-AllK3Nodes,
 								      pong/=rpc:call(Node,k3,ping,[],5000)],
     rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
 				 {"DEBUG: FailedK3HostsNodes   ",FailedK3HostsNodes}]),
