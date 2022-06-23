@@ -22,6 +22,8 @@
 
 %% External exports
 -export([
+	 cluster_id/0,
+	 
 	 desired_state_check/0,
 
 	 appl_start/1,
@@ -74,7 +76,8 @@ stop()-> gen_server:call(?SERVER, {stop},infinity).
 
 
 %% ====================================================================
-
+cluster_id()-> 
+    gen_server:call(?SERVER, {cluster_id},infinity).
 %% 
 %% @doc:check if service is running
 %% @param: non
@@ -123,7 +126,6 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-
 
 handle_call({ping},_From, State) ->
     Reply=pong,

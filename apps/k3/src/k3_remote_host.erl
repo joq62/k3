@@ -46,6 +46,7 @@ start_k3(HostName,DeploymentName)->
     ok=nodelog_init(Node,NodeDir),    
     ok=node_init(Node,NodeDir), 
     ok=k3_init(Node,NodeDir,DeploymentName),
+    ok=k3_controller_init(Node,NodeDir,DeploymentName),    
     ok=leader_init(Node,NodeDir),  
     {ok,Node,NodeDir,HostName}.
 
@@ -90,6 +91,7 @@ start(Pid,{HostName,NodeName,CookieStr,PaArgs,EnvArgs,_Appl,NodeDirBase,Deployme
     ok=nodelog_init(Node,NodeDir),    
     ok=node_init(Node,NodeDir), 
     ok=k3_init(Node,NodeDir,DeploymentName),
+    ok=k3_controller_init(Node,NodeDir,DeploymentName),  
     ok=leader_init(Node,NodeDir),  
     Pid!{start_k3,{ok,Node,NodeDir,HostName}}.
 
@@ -114,6 +116,25 @@ leader_init(Node,NodeDir)->
     pong=rpc:call(Node,leader,ping,[],5000),
     rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
 					{"OK, Started application at  node ",leader," ",Node}]),
+    ok.
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+k3_controller_init(Node,NodeDir,DeploymentName)->
+    NodeAppl="k3_controller.spec",
+    {ok,ApplId}=db_application_spec:read(name,NodeAppl),
+    {ok,ApplVsn}=db_application_spec:read(vsn,NodeAppl),
+    {ok,GitPath}=db_application_spec:read(gitpath,NodeAppl),
+    {ok,StartCmd}=db_application_spec:read(cmd,NodeAppl),
+    
+    ok=rpc:call(Node,application,set_env,[[{k3_controller,[{deployment_name,DeploymentName}]}]],5000),
+    {ok,"k3.spec",_,_}=node:load_start_appl(Node,NodeDir,ApplId,ApplVsn,GitPath,StartCmd),
+    pong=rpc:call(Node,k3_controller,ping,[],5000),
+    rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
+					{"OK, Started application at  node ",k3_controller," ",Node}]),
     ok.
 
 %% --------------------------------------------------------------------

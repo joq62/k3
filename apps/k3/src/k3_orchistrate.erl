@@ -62,7 +62,6 @@ desired_state(DeploymentName)->
 
 
 is_k3_alive(_K3Node)->
-    
     false.
 
 is_host_alive(_Host)->
