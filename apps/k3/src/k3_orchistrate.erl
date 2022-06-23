@@ -65,8 +65,8 @@ desired_state(DeploymentName)->
 
     Reply=case HostsToRestart of
 	      []->
-		  rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
-					       {" No Nodes to restart HostsToRestart  ",?MODULE," ",HostsToRestart}]),
+	%	  rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
+	%				       {" No Nodes to restart HostsToRestart  ",?MODULE," ",HostsToRestart}]),
 		  [];
 	      [HostName|_]->
 		  rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
