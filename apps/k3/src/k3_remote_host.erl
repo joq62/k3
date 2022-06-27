@@ -67,10 +67,12 @@ start_k3(DeploymentName)->
     EnvArgs=" ",
     Appl="k3.spec",
     NodeDirBase=ClusterId,   
-    [HostName|_]=Hosts,
-    L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}],
+ %   HostNodesStopped=[{list_to_atom(NodeName++"@"++HostName),rpc:call(list_to_atom(NodeName++"@"++HostName),init,stop,[],100)}||HostName<-Hosts],
+  %  [HostName|_]=Hosts,
+ 
+  %  L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}],
     
- %   L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}||HostName<-Hosts],
+    L=[{HostName,NodeName,CookieStr,PaArgs,EnvArgs,Appl,NodeDirBase,DeploymentName}||HostName<-Hosts],
     true=erlang:set_cookie(node(),list_to_atom(CookieStr)),
     [{StartResult,start_k3}]=mapreduce:start(F1,F2,[],L),
     StartResult.
